@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium DVD Screensaver (Chromatic Aberration Shader)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #020204;
+      --current-color: #00e5ff; /* Cyan chromatic color accent */
+      --current-color-80: rgba(0, 229, 255, 0.8);
+      --current-color-50: rgba(0, 229, 255, 0.5);
+      --current-color-20: rgba(0, 229, 255, 0.2);
+      --current-color-10: rgba(0, 229, 255, 0.1);
+      --current-color-05: rgba(0, 229, 255, 0.05);
+      --hud-bg: rgba(10, 10, 15, 0.65);
+      --hud-border: rgba(255, 255, 255, 0.08);
+      --hud-glow: rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-color);
+      background-image: radial-gradient(circle at center, #0e0e14 0%, #020204 100%);
+      overflow: hidden;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff;
+      cursor: none; /* Hidden by default, shown on mouse move */
+    }
+
+    #screensaver-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* WebGL Canvas */
+    #gl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1s ease;
+    }
+
+    /* Spot glow behind the bouncing DVD logo */
+    .glow-aura {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      filter: blur(80px);
+      opacity: 0.5;
+      background: radial-gradient(circle, rgba(230, 245, 255, 0.12) 0%, transparent 70%);
+      will-change: transform;
+    }
+
+    /* Particles container for collision effects */
+    #particles-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .click-ripple {
+      position: absolute;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: ripple-grow 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+      will-change: width, height, opacity;
+    }
+
+    @keyframes ripple-grow {
+      0% {
+        width: 10px;
+        height: 10px;
+        opacity: 1;
+        border-width: 4px;
+      }
+      100% {
+        width: 140px;
+        height: 140px;
+        opacity: 0;
+        border-width: 1px;
+      }
+    }
+
+    /* Screen corner hit notification */
+    .corner-flash {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.8);
+      font-size: 3.5rem;
+      font-weight: 900;
+      font-family: 'Arial Black', Impact, sans-serif;
+      color: #ffffff;
+      text-shadow: -3px 0 0 rgba(255,0,0,0.8), 3px 0 0 rgba(0,255,255,0.8);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+    }
+
+    @keyframes flash-animation {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.6);
+      }
+      15% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+      30% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      80% {
+        opacity: 1;
+        filter: blur(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -40%) scale(1.2);
+        filter: blur(10px);
+      }
+    }
+
+    .corner-flash.animate {
+      animation: flash-animation 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* HUD Dashboard styling */
+    .hud-bar {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 12px 28px;
+      background: var(--hud-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 100px;
+      border: 1px solid var(--current-color-20);
+      box-shadow: 0 10px 40px var(--hud-glow), 0 0 20px var(--current-color-05);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1000;
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                  transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                  border-color 0.4s ease, 
+                  box-shadow 0.4s ease;
+    }
+
+    .hud-bar.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
+    .hud-stats {
+      display: flex;
+      gap: 20px;
+      padding-right: 24px;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .hud-stat-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 70px;
+    }
+
+    .hud-stat-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-bottom: 2px;
+      font-weight: 500;
+    }
+
+    .hud-stat-value {
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+      font-feature-settings: "tnum";
+    }
+
+    .hud-controls {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .hud-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hud-control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 600;
+    }
+
+    .hud-control-val {
+      font-weight: 700;
+      color: var(--current-color);
+      transition: color 0.4s ease;
+    }
+
+    /* Range slider custom styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 105px;
+      background: rgba(255, 255, 255, 0.1);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+      margin: 4px 0;
+      transition: background 0.3s;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+      transition: transform 0.1s, background 0.3s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+      background: var(--current-color);
+    }
+
+    .hud-buttons {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-left: 8px;
+    }
+
+    /* Action buttons styling */
+    .hud-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s ease;
+    }
+
+    .hud-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--current-color-50);
+      color: #ffffff;
+      transform: scale(1.08);
+    }
+
+    .hud-btn:active {
+      transform: scale(0.95);
+    }
+
+    .hud-btn.active {
+      background: var(--current-color);
+      color: #020204;
+      border-color: transparent;
+      box-shadow: 0 0 12px var(--current-color-80);
+    }
+
+    .hud-btn.active:hover {
+      background: #ffffff;
+      color: #020204;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+    }
+
+    .hud-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Keyboard shortcuts helper overlay */
+    .keyboard-hint {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(10, 10, 12, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      opacity: 0;
+      transform: translateY(-10px);
+      pointer-events: none;
+      z-index: 1000;
+      transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .keyboard-hint.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .keyboard-hint-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .key-cap {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #ffffff;
+      font-size: 9px;
+    }
+
+    /* Loading overlay */
+    #loader {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      z-index: 1001;
+      transition: opacity 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-top-color: #ffffff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .hud-bar {
+        flex-direction: column;
+        border-radius: 20px;
+        padding: 16px 20px;
+        gap: 16px;
+        width: calc(100% - 32px);
+        max-width: 340px;
+        bottom: 16px;
+      }
+      .hud-stats {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 12px;
+        width: 100%;
+        justify-content: center;
+      }
+      .hud-controls {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+      }
+      .hud-control-group {
+        width: 100%;
+      }
+      input[type=range] {
+        width: 100%;
+      }
+      .hud-buttons {
+        width: 100%;
+        justify-content: center;
+        margin-top: 4px;
+        padding-left: 0;
+      }
+      .corner-flash {
+        font-size: 2.2rem;
+        letter-spacing: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="screensaver-container">
+    <!-- WebGL Canvas for Chromatic Aberration shader logo -->
+    <canvas id="gl-canvas"></canvas>
+
+    <!-- Spotlight background glow -->
+    <div id="glow-aura" class="glow-aura"></div>
+
+    <!-- Collision Particles -->
+    <div id="particles-container"></div>
+
+    <!-- Corner Hit Flash Text -->
+    <div id="corner-flash" class="corner-flash">Corner Hit!</div>
+
+    <!-- Loading Indicator -->
+    <div id="loader">
+      <div class="spinner"></div>
+      <span>Loading Texture</span>
+    </div>
+
+    <!-- HUD Control Panel Dashboard -->
+    <div id="hud-bar" class="hud-bar">
+      <!-- Stats box -->
+      <div class="hud-stats">
+        <div class="hud-stat-box">
+          <span class="hud-stat-label">Bounces</span>
+          <span id="stat-bounces" class="hud-stat-value">0</span>
+        </div>
+        <div class="hud-stat-box">
+          <span class="hud-stat-label">Corners</span>
+          <span id="stat-corners" class="hud-stat-value" style="color: #ffd700;">0</span>
+        </div>
+      </div>
+
+      <!-- Controls box -->
+      <div class="hud-controls">
+        <div class="hud-control-group">
+          <div class="hud-control-label">
+            <span>Speed</span>
+            <span id="speed-val" class="hud-control-val">4.5x</span>
+          </div>
+          <input type="range" id="speed-slider" min="1" max="15" step="0.5" value="4.5">
+        </div>
+
+        <div class="hud-control-group">
+          <div class="hud-control-label">
+            <span>Size</span>
+            <span id="size-val" class="hud-control-val">220px</span>
+          </div>
+          <input type="range" id="size-slider" min="120" max="380" step="10" value="220">
+        </div>
+
+        <div class="hud-control-group">
+          <div class="hud-control-label">
+            <span>Aberration</span>
+            <span id="aberration-val" class="hud-control-val">8px</span>
+          </div>
+          <input type="range" id="aberration-slider" min="0" max="30" step="1" value="8">
+        </div>
+
+        <div class="hud-buttons">
+          <!-- Play / Pause -->
+          <button id="play-btn" class="hud-btn active" title="Pause (Space)">
+            <svg id="pause-icon" viewBox="0 0 24 24">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+            <svg id="play-icon" viewBox="0 0 24 24" style="display: none;">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          </button>
+
+          <!-- Audio Synthesis -->
+          <button id="sound-btn" class="hud-btn" title="Toggle Sound (M)">
+            <svg id="sound-on-icon" viewBox="0 0 24 24" style="display: none;">
+              <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+            </svg>
+            <svg id="sound-off-icon" viewBox="0 0 24 24">
+              <path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.21.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>
+            </svg>
+          </button>
+
+          <!-- Fullscreen -->
+          <button id="fullscreen-btn" class="hud-btn" title="Fullscreen (F / Double Click)">
+            <svg viewBox="0 0 24 24">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Hint Overlay -->
+    <div id="keyboard-hint" class="keyboard-hint">
+      <div class="keyboard-hint-row">
+        <span>Play/Pause</span>
+        <span class="key-cap">Space</span>
+      </div>
+      <div class="keyboard-hint-row">
+        <span>Toggle Sound</span>
+        <span class="key-cap">M</span>
+      </div>
+      <div class="keyboard-hint-row">
+        <span>Fullscreen</span>
+        <span class="key-cap">F</span>
+      </div>
+      <div class="keyboard-hint-row">
+        <span>Manual Glitch</span>
+        <span class="key-cap">C</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // WebGL Shaders Sources
+    const vsSource = `
+      attribute vec2 a_position;
+      uniform vec2 u_resolution;
+      uniform vec2 u_logo_pos;
+      uniform vec2 u_logo_size;
+      varying vec2 v_texCoord;
+
+      void main() {
+        // Map normal 0..1 coordinates to logo pixel bounds, then to pixel screen coordinates
+        vec2 zeroToOne = a_position * u_logo_size + u_logo_pos;
+        // Normalise to 0.0 .. 2.0 WebGL clipspace space
+        vec2 zeroToTwo = (zeroToOne / u_resolution) * 2.0;
+        // Scale and shift into WebGL coordinates [-1, +1] (flipping Y)
+        gl_Position = vec4(zeroToTwo.x - 1.0, 1.0 - zeroToTwo.y, 0.0, 1.0);
+        
+        // Pass texture coordinates (mapping texture space flipping Y)
+        v_texCoord = vec2(a_position.x, 1.0 - a_position.y);
+      }
+    `;
+
+    const fsSource = `
+      precision mediump float;
+      varying vec2 v_texCoord;
+      uniform sampler2D u_texture;
+      uniform vec2 u_offset; // Chromatic aberration shift offset vector in texture space
+
+      void main() {
+        // Sample the transparency channel with positive/negative offsets
+        // Red channel is offset backward in coordinates
+        float r = texture2D(u_texture, v_texCoord - u_offset).a;
+        // Green channel remains center
+        float g = texture2D(u_texture, v_texCoord).a;
+        // Blue channel is offset forward
+        float b = texture2D(u_texture, v_texCoord + u_offset).a;
+        
+        // Combined alpha is the union of all three offset samples to avoid clipping
+        float alpha = max(max(r, g), b);
+        
+        // Output logo as white inside, chromatic rgb fringed at edges
+        gl_FragColor = vec4(r, g, b, alpha);
+      }
+    `;
+
+    // Local fallback high-fidelity transparent SVG
+    const fallbackSvg = `
+      <svg viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <mask id="v-cut">
+            <rect x="0" y="0" width="300" height="150" fill="white" />
+            <text x="153" y="126" font-family="'Arial Black', Impact, sans-serif" font-size="16" font-weight="900" letter-spacing="10" text-anchor="middle" fill="black">VIDEO</text>
+          </mask>
+        </defs>
+        <path d="M45,25 h30 c22,0 38,13 38,35 c0,22 -16,35 -38,35 h-30 z M65,40 v40 h8 c12,0 20,-8 20,-20 c0,-12 -8,-20 -20,-20 z" fill="white"/>
+        <path d="M120,25 l22,50 l22,-50 h18 l-32,70 h-16 l-32,-70 z" fill="white"/>
+        <path d="M195,25 h30 c22,0 38,13 38,35 c0,22 -16,35 -38,35 h-30 z M215,40 v40 h8 c12,0 20,-8 20,-20 c0,-12 -8,-20 -20,-20 z" fill="white"/>
+        <ellipse cx="150" cy="115" rx="145" ry="22" fill="white" mask="url(#v-cut)"/>
+      </svg>
+    `;
+
+    const WIKIPEDIA_URL = "https://upload.wikimedia.org/wikipedia/commons/9/9b/DVD_logo.svg";
+
+    // Global simulation state variables
+    let logoWidth = 220;
+    let logoHeight = 110;
+    let x = 100;
+    let y = 100;
+    let vx = 4.0;
+    let vy = 3.0;
+    let lastTime = 0;
+    let isPaused = false;
+
+    // Statistics
+    let bounceCount = 0;
+    let cornerHitCount = 0;
+
+    // Shader chromatic aberration settings
+    let glitchAberration = 0.0; // Dynamic temporary offset spiked on collisions
+    let soundEnabled = false;
+
+    // WebGL variables
+    let gl = null;
+    let programInfo = null;
+    let positionBuffer = null;
+    let webglTexture = null;
+
+    // Audio Context
+    let audioCtx = null;
+
+    // DOM selectors
+    const container = document.getElementById('screensaver-container');
+    const glCanvas = document.getElementById('gl-canvas');
+    const glowAura = document.getElementById('glow-aura');
+    const particlesContainer = document.getElementById('particles-container');
+    const cornerFlashText = document.getElementById('corner-flash');
+    const hudBar = document.getElementById('hud-bar');
+    const keyboardHint = document.getElementById('keyboard-hint');
+    const loader = document.getElementById('loader');
+
+    // Controls
+    const speedSlider = document.getElementById('speed-slider');
+    const speedVal = document.getElementById('speed-val');
+    const sizeSlider = document.getElementById('size-slider');
+    const sizeVal = document.getElementById('size-val');
+    const aberrationSlider = document.getElementById('aberration-slider');
+    const aberrationVal = document.getElementById('aberration-val');
+    
+    // Playback Buttons
+    const playBtn = document.getElementById('play-btn');
+    const playIcon = document.getElementById('play-icon');
+    const pauseIcon = document.getElementById('pause-icon');
+    const soundBtn = document.getElementById('sound-btn');
+    const soundOnIcon = document.getElementById('sound-on-icon');
+    const soundOffIcon = document.getElementById('sound-off-icon');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+    // Stats Displays
+    const statBounces = document.getElementById('stat-bounces');
+    const statCorners = document.getElementById('stat-corners');
+
+    // HUD Auto-hide timeouts
+    let hudTimeout;
+    const HUD_TIMEOUT_MS = 2500;
+
+    // Bootstrap Entry
+    function init() {
+      // Setup WebGL Context
+      gl = glCanvas.getContext('webgl') || glCanvas.getContext('experimental-webgl');
+      if (!gl) {
+        alert("Your browser does not support WebGL. Chromatic shader effects cannot be loaded.");
+        loader.textContent = "WebGL unsupported";
+        return;
+      }
+
+      // Enable WebGL alpha transparency blending
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+      // Sizing constraints
+      logoWidth = parseInt(sizeSlider.value);
+      logoHeight = logoWidth / 2;
+
+      // Fit canvas viewport
+      resizeCanvas();
+
+      // Setup initial coordinate positions based on visible bounds (visible logo has 10% padding on each side)
+      const minX = -logoWidth * 0.1;
+      const maxX = window.innerWidth - logoWidth * 0.9;
+      const minY = -logoHeight * 0.1;
+      const maxY = window.innerHeight - logoHeight * 0.9;
+      x = Math.random() * (maxX - minX) + minX;
+      y = Math.random() * (maxY - minY) + minY;
+
+      // Clean starting trajectory
+      const initialSpeed = parseFloat(speedSlider.value);
+      const angle = 0.5 + Math.random() * 0.5; // ~28 to ~57 deg
+      const dirX = Math.random() < 0.5 ? 1 : -1;
+      const dirY = Math.random() < 0.5 ? 1 : -1;
+      vx = Math.cos(angle) * initialSpeed * dirX;
+      vy = Math.sin(angle) * initialSpeed * dirY;
+
+      // Initial color highlights sync
+      updateColorHighlights();
+
+      // Load Logo Image
+      loadLogoImage((img) => {
+        // Prepare image texture with transparent borders to avoid border clamping smudges (drawing centered in 512x256)
+        const preparedCanvas = prepareTexture(img);
+        
+        // Compile Shader Pipeline
+        initProgram();
+        
+        // Init buffers & upload texture to GPU
+        initBuffers();
+        uploadTexture(preparedCanvas);
+
+        // Hide Loading Indicator
+        loader.style.opacity = '0';
+        setTimeout(() => loader.remove(), 500);
+
+        // Fade in WebGL Canvas
+        glCanvas.style.opacity = '1';
+
+        // Start Physics/Rendering loop
+        lastTime = performance.now();
+        requestAnimationFrame(update);
+      });
+
+      // Events
+      setupEvents();
+
+      // Show welcome guide
+      showHUD();
+      keyboardHint.classList.add('visible');
+      setTimeout(() => {
+        keyboardHint.classList.remove('visible');
+        hideHUD();
+      }, 4000);
+    }
+
+    // Load web logo with CORS, fall back to inline SVG on failure
+    function loadLogoImage(onComplete) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      
+      img.onload = () => {
+        onComplete(img);
+      };
+      
+      img.onerror = () => {
+        console.warn("Failed to load DVD image via Wikipedia CORS, loading inline high-fidelity fallback SVG.");
+        const fallbackImg = new Image();
+        const svgBlob = new Blob([fallbackSvg], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+        fallbackImg.onload = () => {
+          onComplete(fallbackImg);
+        };
+        fallbackImg.src = url;
+      };
+      
+      img.src = WIKIPEDIA_URL;
+    }
+
+    // Scale vector image to a fixed 512x256 texture canvas with a 10% safety margin boundary (avoids edge-cutoffs)
+    function prepareTexture(image) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = 512;
+      canvas.height = 256;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw standard SVG centered inside the 80% inner width/height boundary
+      const drawW = canvas.width * 0.8;
+      const drawH = canvas.height * 0.8;
+      const drawX = (canvas.width - drawW) / 2;
+      const drawY = (canvas.height - drawH) / 2;
+      
+      ctx.drawImage(image, drawX, drawY, drawW, drawH);
+      
+      return canvas;
+    }
+
+    // WebGL Pipeline Setup
+    function initProgram() {
+      const program = createProgram(gl, vsSource, fsSource);
+      programInfo = {
+        program: program,
+        attribLocations: {
+          position: gl.getAttribLocation(program, 'a_position'),
+        },
+        uniformLocations: {
+          resolution: gl.getUniformLocation(program, 'u_resolution'),
+          logoPos: gl.getUniformLocation(program, 'u_logo_pos'),
+          logoSize: gl.getUniformLocation(program, 'u_logo_size'),
+          offset: gl.getUniformLocation(program, 'u_offset'),
+          texture: gl.getUniformLocation(program, 'u_texture'),
+        },
+      };
+    }
+
+    function createShader(gl, type, source) {
+      const shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error("Shader compile log:", gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    function createProgram(gl, vsSource, fsSource) {
+      const vs = createShader(gl, gl.VERTEX_SHADER, vsSource);
+      const fs = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error("Linker program failure:", gl.getProgramInfoLog(program));
+        return null;
+      }
+      return program;
+    }
+
+    function initBuffers() {
+      positionBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      // Quad coordinates (0.0 to 1.0)
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0, 0,
+        1, 0,
+        0, 1,
+        0, 1,
+        1, 0,
+        1, 1,
+      ]), gl.STATIC_DRAW);
+    }
+
+    function uploadTexture(imgCanvas) {
+      webglTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, webglTexture);
+      
+      // Flip vertical pixel unpacking to fix upside down SVG textures
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      
+      // Wrapping clamps
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      
+      // Upload
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgCanvas);
+    }
+
+    // Main Loop (Physics & Drawing calls)
+    function update(time) {
+      if (isPaused) return;
+
+      const dt = Math.min((time - lastTime) / 16.666, 4); // Frame normalization cap
+      lastTime = time;
+
+      let nextX = x + vx * dt;
+      let nextY = y + vy * dt;
+
+      let hitX = false;
+      let hitY = false;
+
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+
+      // Border bounds checks (accounting for 10% transparent padding inside the texture to bounce visible edges perfectly)
+      if (nextX + logoWidth * 0.1 <= 0) {
+        nextX = -logoWidth * 0.1;
+        vx = -vx;
+        hitX = true;
+      } else if (nextX + logoWidth * 0.9 >= screenW) {
+        nextX = screenW - logoWidth * 0.9;
+        vx = -vx;
+        hitX = true;
+      }
+
+      if (nextY + logoHeight * 0.1 <= 0) {
+        nextY = -logoHeight * 0.1;
+        vy = -vy;
+        hitY = true;
+      } else if (nextY + logoHeight * 0.9 >= screenH) {
+        nextY = screenH - logoHeight * 0.9;
+        vy = -vy;
+        hitY = true;
+      }
+
+      x = nextX;
+      y = nextY;
+
+      // Decay visual glitch aberration back to baseline
+      glitchAberration *= 0.88;
+
+      // Position CSS spotlight glow (center coordinates)
+      const glowSize = logoWidth * 3;
+      const glowX = x + logoWidth / 2 - glowSize / 2;
+      const glowY = y + logoHeight / 2 - glowSize / 2;
+      glowAura.style.transform = `translate3d(${glowX}px, ${glowY}px, 0)`;
+
+      // Render WebGL elements
+      renderScene();
+
+      // Check collision interactions
+      if (hitX || hitY) {
+        // Spike chromatic aberration on impact
+        glitchAberration = 0.8;
+
+        if (hitX && hitY) {
+          // Corner hit
+          const cornerX = (vx > 0) ? 0 : screenW;
+          const cornerY = (vy > 0) ? 0 : screenH;
+          triggerCornerCelebration(cornerX, cornerY);
+        } else {
+          // Regular hits (particles spawn precisely at the visible logo boundary collision points)
+          if (hitX) {
+            const colX = (vx > 0) ? 0 : screenW;
+            const colY = y + logoHeight / 2;
+            spawnWallParticles(colX, colY);
+          }
+          if (hitY) {
+            const colX = x + logoWidth / 2;
+            const colY = (vy > 0) ? 0 : screenH;
+            spawnWallParticles(colX, colY);
+          }
+          playBounceSound(false);
+          bounceCount++;
+          statBounces.textContent = bounceCount;
+        }
+      }
+
+      requestAnimationFrame(update);
+    }
+
+    // WebGL Pipeline rendering step
+    function renderScene() {
+      // Clear WebGL context (maintaining transparent canvas to show background styling)
+      gl.clearColor(0.0, 0.0, 0.0, 0.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      if (!webglTexture || !programInfo) return;
+
+      gl.useProgram(programInfo.program);
+
+      // Load positions buffer data
+      gl.enableVertexAttribArray(programInfo.attribLocations.position);
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+      gl.vertexAttribPointer(programInfo.attribLocations.position, 2, gl.FLOAT, false, 0, 0);
+
+      // Normalise coordinates direction vectors
+      const speed = Math.sqrt(vx * vx + vy * vy);
+      let dirX = 0;
+      let dirY = 0;
+      if (speed > 0) {
+        dirX = vx / speed;
+        dirY = vy / speed;
+      }
+
+      // Calculate total chromatic aberration pixel offsets
+      const baseSliderPx = parseFloat(aberrationSlider.value);
+      const glitchPx = glitchAberration * 22; // Glitch bump
+      const totalOffsetPx = baseSliderPx + glitchPx;
+
+      // Translate offsets to texture coordinate values [0.0 - 1.0]
+      const offsetTexX = (totalOffsetPx / logoWidth) * dirX;
+      // Invert Y coordinate axis offsets because texture space begins bottom-left in WebGL
+      const offsetTexY = (totalOffsetPx / logoHeight) * -dirY;
+
+      // Set Shader Uniform bindings
+      gl.uniform2f(programInfo.uniformLocations.resolution, glCanvas.width, glCanvas.height);
+      gl.uniform2f(programInfo.uniformLocations.logoPos, x, y);
+      gl.uniform2f(programInfo.uniformLocations.logoSize, logoWidth, logoHeight);
+      gl.uniform2f(programInfo.uniformLocations.offset, offsetTexX, offsetTexY);
+
+      // Bind GPU texture texture0 unit
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, webglTexture);
+      gl.uniform1i(programInfo.uniformLocations.texture, 0);
+
+      // Process primitives draw Call (Triangles)
+      gl.drawArrays(gl.TRIANGLES, 0, 6);
+    }
+
+    // Colors display updates
+    function updateColorHighlights() {
+      updateSliderTrackFill(speedSlider);
+      updateSliderTrackFill(sizeSlider);
+      updateSliderTrackFill(aberrationSlider);
+    }
+
+    function updateSliderTrackFill(slider) {
+      const min = parseFloat(slider.min) || 0;
+      const max = parseFloat(slider.max) || 100;
+      const val = parseFloat(slider.value);
+      const percentage = ((val - min) / (max - min)) * 100;
+      slider.style.background = `linear-gradient(to right, var(--current-color) 0%, var(--current-color) ${percentage}%, rgba(255,255,255,0.1) ${percentage}%, rgba(255,255,255,0.1) 100%)`;
+    }
+
+    // Particles visual outputs
+    function spawnWallParticles(x, y) {
+      const count = 8;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        // Spawn cyan / red mixed particles mimicking aberration color splits
+        p.style.backgroundColor = Math.random() < 0.5 ? '#ff007f' : '#00e5ff';
+        p.style.boxShadow = `0 0 6px ${p.style.backgroundColor}`;
+        
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        
+        particlesContainer.appendChild(p);
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4 + 1;
+        const pvx = Math.cos(angle) * speed;
+        const pvy = Math.sin(angle) * speed;
+
+        let opacity = 1;
+        let px = x;
+        let py = y;
+
+        function anim() {
+          px += pvx;
+          py += pvy;
+          opacity -= 0.035;
+
+          p.style.transform = `translate3d(${px - x}px, ${py - y}px, 0) scale(${opacity})`;
+          p.style.opacity = opacity;
+
+          if (opacity > 0) {
+            requestAnimationFrame(anim);
+          } else {
+            p.remove();
+          }
+        }
+        requestAnimationFrame(anim);
+      }
+    }
+
+    function triggerCornerCelebration(x, y) {
+      cornerHitCount++;
+      statCorners.textContent = cornerHitCount;
+
+      playBounceSound(true);
+
+      // Trigger text flash
+      cornerFlashText.classList.remove('animate');
+      void cornerFlashText.offsetWidth; // Trigger reflow to restart css animation
+      cornerFlashText.classList.add('animate');
+
+      // Glitch explosion spike
+      glitchAberration = 2.0;
+
+      const count = 40;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const isCyan = Math.random() < 0.5;
+        p.style.backgroundColor = isCyan ? '#00e5ff' : '#ff0055';
+        p.style.boxShadow = `0 0 10px ${p.style.backgroundColor}`;
+        p.style.width = '7px';
+        p.style.height = '7px';
+        
+        p.style.left = x + 'px';
+        p.style.top = y + 'px';
+        
+        particlesContainer.appendChild(p);
+
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 6 + 2;
+        const pvx = Math.cos(angle) * speed;
+        const pvy = Math.sin(angle) * speed - 1.5;
+
+        let opacity = 1;
+        let px = x;
+        let py = y;
+
+        function animCorner() {
+          px += pvx;
+          py += pvy;
+          py += 0.08; // Gravity
+          opacity -= 0.015;
+
+          p.style.transform = `translate3d(${px - x}px, ${py - y}px, 0) scale(${opacity})`;
+          p.style.opacity = opacity;
+
+          if (opacity > 0) {
+            requestAnimationFrame(animCorner);
+          } else {
+            p.remove();
+          }
+        }
+        requestAnimationFrame(animCorner);
+      }
+    }
+
+    // Audio Collision Synthesis (Web Audio API)
+    function playBounceSound(isCorner) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+
+        const now = audioCtx.currentTime;
+        if (isCorner) {
+          // Play synth major chord arpeggio
+          playSynthNote(261.63, now, 0.2);        // C4
+          playSynthNote(329.63, now + 0.08, 0.2); // E4
+          playSynthNote(392.00, now + 0.16, 0.2); // G4
+          playSynthNote(523.25, now + 0.24, 0.5); // C5
+        } else {
+          // Soft short beep note
+          playSynthNote(329.63, now, 0.08); // E4
+        }
+      } catch (e) {
+        console.error("Audio failed playing", e);
+      }
+    }
+
+    function playSynthNote(freq, startTime, duration) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle'; // Smooth retro sound
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.12, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    // Interactive Shove
+    function triggerManualShove(clientX, clientY) {
+      // Glitch visual flash
+      glitchAberration = 1.8;
+
+      playBounceSound(false);
+
+      const impulseStrength = 5;
+      const angle = Math.random() * Math.PI * 2;
+      vx += Math.cos(angle) * impulseStrength;
+      vy += Math.sin(angle) * impulseStrength;
+
+      // Limit speed
+      const curSpeed = Math.sqrt(vx * vx + vy * vy);
+      const maxSpeed = 16;
+      if (curSpeed > maxSpeed) {
+        vx = (vx / currentSpeed) * maxSpeed;
+        vy = (vy / currentSpeed) * maxSpeed;
+      }
+
+      // Ripple effects
+      const ripple = document.createElement('div');
+      ripple.className = 'click-ripple';
+      ripple.style.left = clientX + 'px';
+      ripple.style.top = clientY + 'px';
+      particlesContainer.appendChild(ripple);
+
+      ripple.addEventListener('animationend', () => {
+        ripple.remove();
+      });
+    }
+
+    // Handlers
+    function togglePause() {
+      isPaused = !isPaused;
+      if (isPaused) {
+        playBtn.classList.remove('active');
+        playIcon.style.display = 'block';
+        pauseIcon.style.display = 'none';
+      } else {
+        playBtn.classList.add('active');
+        playIcon.style.display = 'none';
+        pauseIcon.style.display = 'block';
+        lastTime = performance.now();
+        requestAnimationFrame(update);
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn(`Fullscreen error: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function showHUD() {
+      hudBar.classList.add('visible');
+      document.body.style.cursor = 'default';
+      resetHUDTimeout();
+    }
+
+    function hideHUD() {
+      if (hudBar.matches(':hover')) {
+        resetHUDTimeout();
+        return;
+      }
+      hudBar.classList.remove('visible');
+      document.body.style.cursor = 'none';
+    }
+
+    function resetHUDTimeout() {
+      clearTimeout(hudTimeout);
+      hudTimeout = setTimeout(hideHUD, HUD_TIMEOUT_MS);
+    }
+
+    // Resize viewport
+    function resizeCanvas() {
+      glCanvas.width = window.innerWidth;
+      glCanvas.height = window.innerHeight;
+      if (gl) {
+        gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+      }
+    }
+
+    // Register Event Listeners
+    function setupEvents() {
+      window.addEventListener('mousemove', showHUD);
+      
+      hudBar.addEventListener('mouseenter', () => {
+        clearTimeout(hudTimeout);
+      });
+      hudBar.addEventListener('mouseleave', resetHUDTimeout);
+
+      // Main click listener to handle manual click inside the visible bouncing logo shape
+      window.addEventListener('click', (e) => {
+        // Prevent click if clicking HUD control panels
+        if (hudBar.contains(e.target)) return;
+
+        // Bounding check centered on visible logo bounds inside the 10% padded texture area
+        const visibleX = x + logoWidth * 0.1;
+        const visibleY = y + logoHeight * 0.1;
+        const visibleW = logoWidth * 0.8;
+        const visibleH = logoHeight * 0.8;
+
+        if (e.clientX >= visibleX && e.clientX <= visibleX + visibleW &&
+            e.clientY >= visibleY && e.clientY <= visibleY + visibleH) {
+          triggerManualShove(e.clientX, e.clientY);
+        }
+      });
+
+      window.addEventListener('dblclick', toggleFullscreen);
+
+      sizeSlider.addEventListener('input', () => {
+        const newSize = parseInt(sizeSlider.value);
+        sizeVal.textContent = newSize + 'px';
+
+        const cx = x + logoWidth / 2;
+        const cy = y + logoHeight / 2;
+
+        logoWidth = newSize;
+        logoHeight = logoWidth / 2;
+
+        x = cx - logoWidth / 2;
+        y = cy - logoHeight / 2;
+
+        // Clamp using visible bounds
+        x = Math.max(-logoWidth * 0.1, Math.min(window.innerWidth - logoWidth * 0.9, x));
+        y = Math.max(-logoHeight * 0.1, Math.min(window.innerHeight - logoHeight * 0.9, y));
+
+        updateColorHighlights();
+      });
+
+      speedSlider.addEventListener('input', () => {
+        const newSpeed = parseFloat(speedSlider.value);
+        speedVal.textContent = newSpeed.toFixed(1) + 'x';
+
+        const curSpeed = Math.sqrt(vx * vx + vy * vy);
+        if (curSpeed > 0) {
+          vx = (vx / curSpeed) * newSpeed;
+          vy = (vy / currentSpeed) * newSpeed;
+        } else {
+          vx = newSpeed * 0.8;
+          vy = newSpeed * 0.6;
+        }
+
+        updateColorHighlights();
+      });
+
+      aberrationSlider.addEventListener('input', () => {
+        const newAberration = parseInt(aberrationSlider.value);
+        aberrationVal.textContent = newAberration + 'px';
+        updateColorHighlights();
+      });
+
+      playBtn.addEventListener('click', () => {
+        togglePause();
+        playBtn.blur();
+      });
+
+      soundBtn.addEventListener('click', () => {
+        soundEnabled = !soundEnabled;
+        if (soundEnabled) {
+          soundBtn.classList.add('active');
+          soundOnIcon.style.display = 'block';
+          soundOffIcon.style.display = 'none';
+
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          playBounceSound(true); // play chime confirmation
+        } else {
+          soundBtn.classList.remove('active');
+          soundOnIcon.style.display = 'none';
+          soundOffIcon.style.display = 'block';
+        }
+        soundBtn.blur();
+      });
+
+      fullscreenBtn.addEventListener('click', () => {
+        toggleFullscreen();
+        fullscreenBtn.blur();
+      });
+
+      window.addEventListener('resize', () => {
+        resizeCanvas();
+        // Clamp boundaries safely during resizing
+        x = Math.max(-logoWidth * 0.1, Math.min(window.innerWidth - logoWidth * 0.9, x));
+        y = Math.max(-logoHeight * 0.1, Math.min(window.innerHeight - logoHeight * 0.9, y));
+      });
+
+      window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT') {
+          return;
+        }
+
+        if (e.code === 'Space') {
+          e.preventDefault();
+          togglePause();
+        } else if (key === 'm') {
+          soundBtn.click();
+        } else if (key === 'f') {
+          toggleFullscreen();
+        } else if (key === 'c') {
+          // Trigger a manual glitch effect
+          glitchAberration = 2.0;
+          playBounceSound(false);
+        } else if (key === 'h') {
+          keyboardHint.classList.toggle('visible');
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement) {
+          fullscreenBtn.classList.add('active');
+        } else {
+          fullscreenBtn.classList.remove('active');
+        }
+      });
+    }
+
+    // Start
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
