@@ -1,7 +1,8 @@
 # git summer school assignment `#1`
 
 This is my first Git and GitHub assignment.
-## About Me My name is Your Name. I am learning how to track code using Git and push code to Gi tHub.
+## About Me My name is Aabish Malik.
+I am learning how to track code using Git and push code to GitHub.
 ## Commands I Practiced
   - git init
   - git status
