@@ -185,6 +185,7 @@
       opacity: 0;
       pointer-events: none;
       z-index: 1000;
+      isolation: isolate;
       transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
                   transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
                   border-color 0.4s ease, 
@@ -284,6 +285,47 @@
       background: var(--current-color);
     }
 
+    /* Blur Mode Toggle styling */
+    .blur-toggle-container {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 2px;
+      width: 105px;
+      height: 24px;
+      align-items: center;
+    }
+
+    .blur-toggle-btn {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 18px;
+      color: rgba(255, 255, 255, 0.6);
+      font-family: inherit;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .blur-toggle-btn:hover {
+      color: #ffffff;
+    }
+
+    .blur-toggle-btn.active {
+      background: var(--current-color);
+      color: #020204;
+      box-shadow: 0 0 8px var(--current-color-50);
+    }
+
     .hud-buttons {
       display: flex;
       align-items: center;
@@ -358,6 +400,43 @@
       pointer-events: none;
       z-index: 1000;
       transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      isolation: isolate;
+    }
+
+    /* Noise overlay for real blur */
+    .noise-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      mix-blend-mode: overlay;
+      z-index: -1;
+    }
+
+    /* Real Blur active overrides */
+    .real-blur-active .noise-overlay {
+      opacity: 0.15;
+    }
+
+    .real-blur-active .hud-bar {
+      background: rgba(15, 15, 25, 0.75);
+      backdrop-filter: url(#real-blur-filter) blur(35px);
+      -webkit-backdrop-filter: blur(35px);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 15px 45px rgba(0, 0, 0, 0.85), 0 0 25px var(--current-color-10);
+    }
+
+    .real-blur-active .keyboard-hint {
+      background: rgba(15, 15, 22, 0.7);
+      backdrop-filter: url(#real-blur-filter) blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-color: rgba(255, 255, 255, 0.08);
     }
 
     .keyboard-hint.visible {
@@ -442,6 +521,9 @@
       input[type=range] {
         width: 100%;
       }
+      .blur-toggle-container {
+        width: 100%;
+      }
       .hud-buttons {
         width: 100%;
         justify-content: center;
@@ -477,6 +559,7 @@
 
     <!-- HUD Control Panel Dashboard -->
     <div id="hud-bar" class="hud-bar">
+      <div class="noise-overlay"></div>
       <!-- Stats box -->
       <div class="hud-stats">
         <div class="hud-stat-box">
@@ -515,6 +598,17 @@
           <input type="range" id="aberration-slider" min="0" max="30" step="1" value="8">
         </div>
 
+        <div class="hud-control-group">
+          <div class="hud-control-label">
+            <span>Blur Mode</span>
+            <span id="blur-val" class="hud-control-val">Fast</span>
+          </div>
+          <div class="blur-toggle-container">
+            <button type="button" id="blur-fast-btn" class="blur-toggle-btn active" title="Fast Blur">Fast</button>
+            <button type="button" id="blur-real-btn" class="blur-toggle-btn" title="Real Blur (Frosted Glass)">Real</button>
+          </div>
+        </div>
+
         <div class="hud-buttons">
           <!-- Play / Pause -->
           <button id="play-btn" class="hud-btn active" title="Pause (Space)">
@@ -548,6 +642,7 @@
 
     <!-- Keyboard Hint Overlay -->
     <div id="keyboard-hint" class="keyboard-hint">
+      <div class="noise-overlay"></div>
       <div class="keyboard-hint-row">
         <span>Play/Pause</span>
         <span class="key-cap">Space</span>
@@ -564,7 +659,22 @@
         <span>Manual Glitch</span>
         <span class="key-cap">C</span>
       </div>
+      <div class="keyboard-hint-row">
+        <span>Blur Mode</span>
+        <span class="key-cap">B</span>
+      </div>
     </div>
+
+    <!-- SVG Filter for Real Blur (Frosted Glass / Refraction / Noise) -->
+    <svg style="position: absolute; width: 0; height: 0; pointer-events: none;" width="0" height="0">
+      <defs>
+        <filter id="real-blur-filter" x="0" y="0" width="100%" height="100%">
+          <feGaussianBlur stdDeviation="15" result="blur" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="4" result="noise" />
+          <feDisplacementMap in="blur" in2="noise" scale="4" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
   </div>
 
   <script>
@@ -647,6 +757,7 @@
     // Shader chromatic aberration settings
     let glitchAberration = 0.0; // Dynamic temporary offset spiked on collisions
     let soundEnabled = false;
+    let blurMode = 'fast'; // 'fast' or 'real'
 
     // WebGL variables
     let gl = null;
@@ -674,6 +785,11 @@
     const sizeVal = document.getElementById('size-val');
     const aberrationSlider = document.getElementById('aberration-slider');
     const aberrationVal = document.getElementById('aberration-val');
+    
+    // Blur Controls
+    const blurFastBtn = document.getElementById('blur-fast-btn');
+    const blurRealBtn = document.getElementById('blur-real-btn');
+    const blurVal = document.getElementById('blur-val');
     
     // Playback Buttons
     const playBtn = document.getElementById('play-btn');
@@ -1210,6 +1326,21 @@
     }
 
     // Handlers
+    function setBlurMode(mode) {
+      blurMode = mode;
+      if (mode === 'real') {
+        blurFastBtn.classList.remove('active');
+        blurRealBtn.classList.add('active');
+        blurVal.textContent = 'Real';
+        document.body.classList.add('real-blur-active');
+      } else {
+        blurRealBtn.classList.remove('active');
+        blurFastBtn.classList.add('active');
+        blurVal.textContent = 'Fast';
+        document.body.classList.remove('real-blur-active');
+      }
+    }
+
     function togglePause() {
       isPaused = !isPaused;
       if (isPaused) {
@@ -1334,6 +1465,16 @@
         updateColorHighlights();
       });
 
+      blurFastBtn.addEventListener('click', () => {
+        setBlurMode('fast');
+        blurFastBtn.blur();
+      });
+
+      blurRealBtn.addEventListener('click', () => {
+        setBlurMode('real');
+        blurRealBtn.blur();
+      });
+
       playBtn.addEventListener('click', () => {
         togglePause();
         playBtn.blur();
@@ -1391,6 +1532,8 @@
           // Trigger a manual glitch effect
           glitchAberration = 2.0;
           playBounceSound(false);
+        } else if (key === 'b') {
+          setBlurMode(blurMode === 'fast' ? 'real' : 'fast');
         } else if (key === 'h') {
           keyboardHint.classList.toggle('visible');
         }
