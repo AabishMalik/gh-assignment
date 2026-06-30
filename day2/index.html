@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aabish Malik - Resume</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    line-height: 1.5;
+    margin: 0;
+    padding: 40px;
+    background-color: #fff;
+    font-size: 13px;
+  }
+  h1, h2, h3, .serif {
+    font-family: 'Times New Roman', Times, serif;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .header h1 {
+    font-size: 32px;
+    margin: 0 0 5px 0;
+    color: #000;
+  }
+  .header .contact {
+    font-size: 13px;
+    color: #444;
+  }
+  .section-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #000;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    padding: 5px 0;
+    margin: 20px 0 15px 0;
+    text-transform: uppercase;
+  }
+  .summary {
+    margin-bottom: 20px;
+  }
+  
+  .item {
+    margin-bottom: 15px;
+  }
+  .item-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .item-title {
+    font-size: 15px;
+    font-weight: bold;
+    color: #000;
+  }
+  .item-subtitle {
+    font-size: 14px;
+    color: #555;
+    font-style: italic;
+  }
+  .item-date, .item-location {
+    font-size: 14px;
+    color: #555;
+  }
+  
+  ul {
+    margin: 5px 0 0 20px;
+    padding: 0;
+  }
+  li {
+    margin-bottom: 5px;
+  }
+
+  .skills-row {
+    margin-bottom: 5px;
+  }
+  .skills-category {
+    font-weight: bold;
+    color: #000;
+  }
+
+  .list-item {
+    margin-bottom: 5px;
+    display: flex;
+    align-items: flex-start;
+  }
+  .list-item-bullet {
+    margin-right: 10px;
+    color: #000;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  
+  <div class="header">
+    <h1 class="serif">Aabish Malik</h1>
+    <div class="contact">Jammu, India &nbsp;&bull;&nbsp; +91 7006171340 &nbsp;&bull;&nbsp; aabishmalik3337@gmail.com</div>
+    <div class="contact">cier.dev &nbsp;&bull;&nbsp; github.com/CierCier &nbsp;&bull;&nbsp; linkedin.com/in/aabish-malik/</div>
+  </div>
+
+  <div class="section-title serif">Professional Summary</div>
+  <div class="summary">
+    Computer Science Engineering student specializing in AI/ML with strong systems programming and low-level software engineering experience. Focused on compiler design, networking, backend infrastructure, and performance-oriented development using C, Rust, and Linux-based tooling. Experienced in building custom parsers, HTTP infrastructure, semantic analyzers, and developer tooling through open-source and independent engineering projects.
+  </div>
+
+  <div class="section-title serif">Education</div>
+  <div class="item">
+    <div class="item-row">
+      <div class="item-title">Bachelor of Engineering in Computer Science and Engineering (AI/ML)</div>
+      <div class="item-date">2023 - Present</div>
+    </div>
+    <div class="item-row">
+      <div class="item-subtitle">Model Institute of Engineering and Technology, Jammu | CGPA: 8.2</div>
+    </div>
+  </div>
+  <div class="item" style="margin-bottom:0;">
+    <div class="item-row">
+      <div class="item-title">Senior Secondary Education (12th Grade)</div>
+      <div class="item-date">2022 - 2023</div>
+    </div>
+    <div class="item-row">
+      <div class="item-subtitle">M.V. International School, Vijaypur, Samba</div>
+    </div>
+  </div>
+
+  <div class="section-title serif">Projects</div>
+  
+  <div class="item">
+    <div class="item-row">
+      <div class="item-title">Mopi <span class="item-subtitle" style="font-style:normal; font-weight:normal;">| Local Semantic Search Engine in Rust</span></div>
+      <div class="item-date">March 2026 - May 2026</div>
+    </div>
+    <ul>
+      <li>Developed a high-performance local semantic search engine in Rust combining lexical (Tantivy) and vector (HNSW) search.</li>
+      <li>Integrated local embedding inference using FastEmbed-RS and ONNX Runtime with INT8 quantization for private search.</li>
+      <li>Built a modular daemon-client architecture (mopid/mopictl) with low-overhead Unix socket IPC.</li>
+      <li>Designed structure-aware semantic chunking and hybrid ranking using Reciprocal Rank Fusion (RRF).</li>
+      <li>Developed kiwi, a Wayland-friendly launcher-style GUI for interactive search-as-you-type functionality.</li>
+    </ul>
+  </div>
+
+  <div class="item">
+    <div class="item-row">
+      <div class="item-title">Narva P3 <span class="item-subtitle" style="font-style:normal; font-weight:normal;">| Stereo Vision & Pathfinding for Planetary Terrain</span></div>
+      <div class="item-date">February 2026 - Present</div>
+    </div>
+    <ul>
+      <li>Developed a stereo vision pipeline in Python to transform Mars/Moon satellite imagery (HiRISE) into 3D terrain maps.</li>
+      <li>Implemented SGBM disparity algorithms to derive relative depth, slope, and traversability cost maps.</li>
+      <li>Built a pathfinding module using the A* algorithm to enable autonomous agent navigation over generated cost maps.</li>
+      <li>Created an interactive 3D terrain viewer using Pygame, utilizing depth for elevation and cost for color visualization.</li>
+      <li>Engineered a modular CLI tool for automated data ingestion, preprocessing, and pipeline orchestration.</li>
+    </ul>
+  </div>
+
+  <div class="item">
+    <div class="item-row">
+      <div class="item-title">Libserver <span class="item-subtitle" style="font-style:normal; font-weight:normal;">| High-Performance Lightweight HTTP Server Library in C99</span></div>
+      <div class="item-date">November 2025 - Present</div>
+    </div>
+    <ul>
+      <li>Designed and developed a lightweight HTTP server library in C99 focused on performance and modularity.</li>
+      <li>Built a custom routing system with support for Express-style dynamic routing and middleware patterns.</li>
+      <li>Developed a minimal JSON parser in C99 for efficient request and response processing.</li>
+      <li>Implemented an FTP-compliant file transfer module supporting streamlined file handling workflows.</li>
+      <li>Structured the project for extensibility and low-overhead server-side application development.</li>
+    </ul>
+  </div>
+
+  <div class="item">
+    <div class="item-row">
+      <div class="item-title">Silver <span class="item-subtitle" style="font-style:normal; font-weight:normal;">| Minimalist Frontend for LLVM</span></div>
+      <div class="item-date">April 2025 - Present</div>
+    </div>
+    <ul>
+      <li>Designed and developed a complete LLVM frontend in Rust for experimental language development.</li>
+      <li>Implemented a custom parser capable of handling complex template syntax with advanced error recovery.</li>
+      <li>Built a lexical analyzer and semantic analyzer supporting compile-time evaluation of complex expressions.</li>
+      <li>Developed compiler infrastructure focused on language tooling, syntax analysis, and semantic validation.</li>
+      <li>Integrated LLVM-based compilation workflows for efficient intermediate representation generation.</li>
+    </ul>
+  </div>
+
+  <div class="section-title serif">Technical Skills</div>
+  <div class="skills-row"><span class="skills-category">Languages:</span> C, C++, Rust, Python, JavaScript, Bash</div>
+  <div class="skills-row"><span class="skills-category">Systems & Infrastructure:</span> Linux, Networking, HTTP, FTP, Compiler Design, Operating Systems, Systems Programming</div>
+  <div class="skills-row"><span class="skills-category">Tools & Platforms:</span> Git, LLVM, Docker, Linux CLI, GitHub Actions, ONNX Runtime, OpenCV, Pygame</div>
+  <div class="skills-row"><span class="skills-category">Domains:</span> Backend Development, Compiler Engineering, DevOps, Embedded Systems, AI/ML, Semantic Search, Vector Search, Computer Vision, Pathfinding</div>
+
+  <div class="section-title serif">Leadership & Activities</div>
+  <div class="item">
+    <div class="item-row">
+      <div class="item-title">DevOps Lead <span class="item-subtitle" style="font-style:normal; font-weight:normal;">| GDGoC MIET Jammu</span></div>
+      <div class="item-date">2025 - Present</div>
+    </div>
+    <ul>
+      <li>Led DevOps-related initiatives and infrastructure activities within the student developer community.</li>
+      <li>Assisted in organizing technical workshops, development sessions, and collaborative engineering events.</li>
+    </ul>
+  </div>
+  <div class="item">
+    <div class="item-row">
+      <div class="item-title">Open Source Contributor</div>
+      <div class="item-date">2022 - Present</div>
+    </div>
+    <ul>
+      <li>Contributed to open-source software projects and collaborative development initiatives.</li>
+      <li>Worked with Linux-focused tooling, developer infrastructure, and community-driven repositories.</li>
+    </ul>
+  </div>
+  <div class="item" style="margin-bottom:0;">
+    <div class="item-row">
+      <div class="item-title">Competitive Programming & Problem Solving</div>
+      <div class="item-date">2022 - Present</div>
+    </div>
+    <ul>
+      <li>Regularly practice data structures and algorithms on LeetCode.</li>
+      <li>Focused on problem-solving, optimization, and algorithmic thinking.</li>
+    </ul>
+  </div>
+
+  <div class="section-title serif">Hackathons & Technical Programs</div>
+  <ul>
+    <li>Runner-up, Innovation Design and Entrepreneurship Bootcamp 2026, Guru Nanak Dev Engineering College</li>
+    <li>Smart India Hackathon (SIH) 2025</li>
+    <li>Innovation, Design and Entrepreneurship Bootcamp (AICTE), 2025</li>
+    <li>Smart India Hackathon (SIH) 2024</li>
+  </ul>
+
+  <div class="section-title serif">Certifications</div>
+  <ul>
+    <li>Deep Learning Specialization | DeepLearning.AI | April 2026</li>
+    <li>Building Quantum Intuition with IBM Qiskit | December 2025</li>
+    <li>Deep Learning | IIT Ropar | November 2025</li>
+    <li>IBM AI Developer | IBM | October 2025</li>
+    <li>Machine Learning | University of Washington | October 2025</li>
+    <li>Machine Learning with TensorFlow on Google Cloud | Google Cloud | October 2025</li>
+    <li>Machine Learning on Google Cloud | Google Cloud | September 2025</li>
+  </ul>
+
+</div>
+</body>
+</html>
