@@ -1,0 +1,40 @@
+.header {
+    width: 100vw;
+    height: max-content;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: lightgray;
+    padding: 0.5em 1em;
+}
+.header-left {
+    display: flex;
+    flex: 1;
+    justify-content: flex-start;
+}
+.header-right {
+    display: flex;
+    flex: 1;
+    justify-content: flex-end;
+    gap: 0.5em;
+}
+.tag {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: white;
+}
+
+.grid-container {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.grid-item {
+    min-width: 250px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
